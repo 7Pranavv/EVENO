@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# frontend build
+frontend/.next/
+frontend/out/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# backend build
+backend/dist/
+
+# env files
+.env
+.env*.local
+
+# filled-in Kubernetes secret (the .example template is committed)
+k8s/secret.yaml
+
+# claude code local settings
+.claude/settings.local.json
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# misc
+.DS_Store
+*.pem

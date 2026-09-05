@@ -1,0 +1,99 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eveno-frontend
+  namespace: eveno
+spec:
+  selector:
+    app: eveno-frontend
+  ports:
+    - name: http
+      port: 3000
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eveno-frontend
+  namespace: eveno
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eveno-frontend
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: eveno-frontend
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: web
+          # NOTE: this image has NEXT_PUBLIC_API_BASE and
+          # NEXT_PUBLIC_DESCOPE_PROJECT_ID compiled into its client bundle.
+          # Adding them to env: here has no effect — point this at an image
+          # built with the right build args for this environment.
+          image: eveno-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+          startupProbe:
+            httpGet:
+              path: /
+              port: http
+            failureThreshold: 20
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          resources:
+            requests:
+              cpu: 100m
+              memory: 192Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            # Next.js writes its runtime cache here; without a writable mount
+            # the read-only root filesystem makes the server fall over.
+            - name: next-cache
+              mountPath: /app/.next/cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: next-cache
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: eveno-frontend
+  namespace: eveno
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: eveno-frontend

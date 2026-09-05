@@ -1,0 +1,7 @@
+{
+  // Used by `npm run build` only. The base tsconfig still covers the test
+  // files so `npm run typecheck` checks them; they just don't belong in the
+  // image that gets deployed.
+  "extends": "./tsconfig.json",
+  "exclude": ["node_modules", "dist", "**/*.test.ts"]
+}

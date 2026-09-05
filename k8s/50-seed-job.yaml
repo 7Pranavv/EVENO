@@ -1,0 +1,55 @@
+# One-off job that fills the database with demo data. Optional — skip it
+# entirely for a real deployment.
+#
+#   kubectl apply -f k8s/50-seed-job.yaml
+#   kubectl -n eveno logs job/eveno-seed
+#
+# Re-running needs the old Job deleted first (`kubectl -n eveno delete job
+# eveno-seed`), since a completed Job is immutable.
+#
+# The seed scripts are compiled into the image alongside the server, so this
+# uses the same image with a different command — no ts-node needed at runtime.
+# `npm run seed:reset` equivalent: change the args to ["dist/scripts/seed.js", "--reset"].
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eveno-seed
+  namespace: eveno
+spec:
+  backoffLimit: 2
+  # Clean the Job object up automatically 10 minutes after it finishes.
+  ttlSecondsAfterFinished: 600
+  template:
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+      containers:
+        - name: seed
+          image: eveno-backend:latest
+          imagePullPolicy: IfNotPresent
+          command: ["node"]
+          args: ["dist/scripts/seed.js"]
+          envFrom:
+            - configMapRef:
+                name: eveno-config
+            - secretRef:
+                name: eveno-secrets
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

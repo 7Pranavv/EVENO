@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: eveno
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: eveno-config
+  namespace: eveno
+data:
+  PORT: "8080"
+  # Origin the API accepts browser requests from. Must match the address the
+  # frontend is actually served on, or every call fails CORS preflight.
+  CORS_ORIGIN: "https://eveno.example.com"
+---
+# Template only — DO NOT COMMIT REAL VALUES.
+#
+# Copy this Secret to k8s/secret.yaml (gitignored), fill it in, and apply that
+# instead. Or create it from the command line, which keeps the values out of
+# your shell history file entirely:
+#
+#   kubectl -n eveno create secret generic eveno-secrets \
+#     --from-literal=MONGO_URI='mongodb://eveno-mongo-0.eveno-mongo:27017/eveno' \
+#     --from-literal=DESCOPE_PROJECT_ID='...' \
+#     --from-literal=RAZORPAY_KEY_ID='...' \
+#     --from-literal=RAZORPAY_KEY_SECRET='...'
+#
+# stringData takes plain text; Kubernetes base64-encodes it on write. Note that
+# base64 is encoding, not encryption — anyone who can read Secrets in this
+# namespace can read these values, so scope RBAC accordingly and enable
+# encryption at rest on the cluster.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: eveno-secrets
+  namespace: eveno
+type: Opaque
+stringData:
+  MONGO_URI: "mongodb://eveno-mongo-0.eveno-mongo.eveno.svc.cluster.local:27017/eveno"
+  DESCOPE_PROJECT_ID: "replace-me"
+  RAZORPAY_KEY_ID: "replace-me"
+  RAZORPAY_KEY_SECRET: "replace-me"

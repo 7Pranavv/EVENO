@@ -1,0 +1,44 @@
+# Two hostnames, because the browser talks to both directly: the app is served
+# from one and calls the API on the other. Whatever you set for the API host
+# here must match the NEXT_PUBLIC_API_BASE the frontend image was built with,
+# and the app host must match CORS_ORIGIN in the ConfigMap. Those three values
+# have to agree or the site loads and every request fails.
+#
+# Written for ingress-nginx. On another controller the annotations differ but
+# the routing is the same.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: eveno
+  namespace: eveno
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "2m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - eveno.example.com
+        - api.eveno.example.com
+      secretName: eveno-tls
+  rules:
+    - host: eveno.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eveno-frontend
+                port:
+                  number: 3000
+    - host: api.eveno.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: eveno-backend
+                port:
+                  number: 8080

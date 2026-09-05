@@ -1,0 +1,100 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: eveno-backend
+  namespace: eveno
+spec:
+  selector:
+    app: eveno-backend
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: eveno-backend
+  namespace: eveno
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: eveno-backend
+  strategy:
+    rollingUpdate:
+      maxUnavailable: 0     # keep serving throughout a deploy
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: eveno-backend
+    spec:
+      # server.ts closes the listener on SIGTERM and gives in-flight requests
+      # up to 10s; this leaves headroom above that.
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000       # the `node` user in node:alpine
+      containers:
+        - name: api
+          image: eveno-backend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: eveno-config
+            - secretRef:
+                name: eveno-secrets
+          # config/env.ts exits at boot if a required variable is missing, so a
+          # bad Secret shows up as CrashLoopBackOff with the name in the log
+          # rather than as a confusing runtime error later.
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 12
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz    # deliberately not /readyz — see server.ts
+              port: http
+            periodSeconds: 20
+            timeoutSeconds: 3
+          readinessProbe:
+            httpGet:
+              path: /readyz     # fails while Mongo is unreachable
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        # The image needs no writable disk, but Node still wants a temp dir.
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: eveno-backend
+  namespace: eveno
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: eveno-backend
