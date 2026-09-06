@@ -33,6 +33,8 @@ RUN test -n "$NEXT_PUBLIC_API_BASE" || (echo "ERROR: build arg NEXT_PUBLIC_API_B
 RUN test -n "$NEXT_PUBLIC_DESCOPE_PROJECT_ID" || (echo "ERROR: build arg NEXT_PUBLIC_DESCOPE_PROJECT_ID is required" && exit 1)
 
 ENV NEXT_TELEMETRY_DISABLED=1
+# Switches next.config.ts to standalone output — see the comment there.
+ENV DOCKER_BUILD=1
 RUN npm run build
 
 # ── Runtime ──────────────────────────────────────────────────────────

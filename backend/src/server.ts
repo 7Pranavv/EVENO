@@ -18,7 +18,23 @@ import { startStaleSeatSweeper } from "./jobs/releaseStaleSeats";
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: env.corsOrigin, credentials: true }));
+
+// Behind Render's / any PaaS load balancer, so req.ip reflects the real client
+// rather than the proxy — the payment rate limiter keys on it for anonymous
+// callers.
+app.set("trust proxy", 1);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // No Origin header: same-origin, curl, or a server-to-server call.
+      // Nothing to check, and blocking these would break health probes.
+      if (!origin) return callback(null, true);
+      callback(null, env.corsOrigins.includes(origin.replace(/\/$/, "")));
+    },
+    credentials: true,
+  })
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

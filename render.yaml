@@ -1,0 +1,39 @@
+# Render Blueprint for the Eveno API.
+#
+# In Render: New → Blueprint → connect this repo. Render reads this file and
+# creates the service; you then fill in the secrets it prompts for.
+#
+# The frontend is NOT here — it goes to Vercel. See DEPLOY.md.
+services:
+  - type: web
+    name: eveno-api
+    runtime: node
+    plan: free
+    region: singapore          # closest to the Indian users this app targets
+    # The API lives in a subdirectory of the repo.
+    rootDir: backend
+    buildCommand: npm ci && npm run build
+    startCommand: npm start
+    # Render restarts the service if this stops returning 2xx. It must be the
+    # liveness endpoint, not /readyz — /readyz reports the Mongo connection,
+    # and a database blip should not trigger a restart loop.
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      # sync:false means "prompt me, don't store it in git". Set these in the
+      # Render dashboard.
+      - key: MONGO_URI
+        sync: false            # MongoDB Atlas connection string
+      - key: DESCOPE_PROJECT_ID
+        sync: false
+      - key: RAZORPAY_KEY_ID
+        sync: false
+      - key: RAZORPAY_KEY_SECRET
+        sync: false
+      # Comma-separated. Must list every frontend origin that calls this API —
+      # the Vercel production domain, plus localhost for local development.
+      # Update it after the first Vercel deploy, when you know the URL.
+      - key: CORS_ORIGIN
+        sync: false
+    # PORT is injected by Render; config/env.ts already reads process.env.PORT.

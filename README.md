@@ -9,6 +9,7 @@ eveno/
   frontend/   Next.js + React + TypeScript app (see frontend/README.md)
   backend/    Express + MongoDB API (see backend/README.md)
   k8s/        Kubernetes manifests (see k8s/README.md)
+  DEPLOY.md   Hosting on Render + Vercel + MongoDB Atlas
 ```
 
 ## Run it with Docker
@@ -27,7 +28,8 @@ One thing to know: `NEXT_PUBLIC_*` values are compiled into the browser bundle
 when the frontend image is built, so changing `NEXT_PUBLIC_API_BASE` needs
 `docker compose build frontend`, not just a restart.
 
-For a cluster, see [`k8s/README.md`](k8s/README.md).
+For a cluster, see [`k8s/README.md`](k8s/README.md). To put it on the internet
+(Render + Vercel + MongoDB Atlas), see [`DEPLOY.md`](DEPLOY.md).
 
 ## Quick start (without Docker)
 

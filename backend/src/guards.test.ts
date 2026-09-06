@@ -1,5 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { parseOrigins } from "./config/env";
 import { pickEditable } from "./controllers/eventController";
 import { whoCanAction } from "./controllers/registrationController";
 import { requireRole } from "./middleware/auth";
@@ -36,6 +37,29 @@ test("pickEditable drops privileged fields", () => {
 
 test("pickEditable ignores undefined without inventing keys", () => {
   assert.deepEqual(pickEditable({ title: undefined }), {});
+});
+
+test("parseOrigins splits a list and trims trailing slashes", () => {
+  assert.deepEqual(
+    parseOrigins("https://eveno.vercel.app/, http://localhost:3000"),
+    ["https://eveno.vercel.app", "http://localhost:3000"]
+  );
+});
+
+test("parseOrigins falls back to localhost when unset", () => {
+  assert.deepEqual(parseOrigins(undefined), ["http://localhost:3000"]);
+});
+
+test("parseOrigins ignores empty entries from a trailing comma", () => {
+  assert.deepEqual(parseOrigins("https://a.com,,"), ["https://a.com"]);
+});
+
+// An allowlist that matched by suffix would let anyone's deployment on the
+// same platform make credentialed calls to this API.
+test("parseOrigins produces exact origins, never patterns", () => {
+  const allowed = parseOrigins("https://eveno.vercel.app");
+  assert.ok(!allowed.includes("https://evil-eveno.vercel.app"));
+  assert.ok(!allowed.some((o) => o.includes("*")));
 });
 
 test("whoCanAction recognises the assigned vendor", () => {

@@ -17,11 +17,24 @@ if (missing.length > 0) {
   process.exit(1);
 }
 
+// CORS_ORIGIN accepts a comma-separated list, because the frontend legitimately
+// lives at more than one address once it is hosted — the production domain plus
+// whichever preview URLs you want working.
+//
+// Deliberately no wildcard support. `*.vercel.app` would look convenient and
+// would let anyone's Vercel deployment make credentialed calls to this API.
+export const parseOrigins = (raw: string | undefined): string[] =>
+  (raw ?? "http://localhost:3000")
+    .split(",")
+    .map((o) => o.trim().replace(/\/$/, ""))   // a trailing slash never matches
+    .filter(Boolean);
+
 export const env = {
   mongoUri:           process.env.MONGO_URI!,
   descopeProjectId:   process.env.DESCOPE_PROJECT_ID!,
   razorpayKeyId:      process.env.RAZORPAY_KEY_ID!,
   razorpayKeySecret:  process.env.RAZORPAY_KEY_SECRET!,
+  // Render and most PaaS hosts assign the port and expect you to use theirs.
   port:               Number(process.env.PORT) || 8080,
-  corsOrigin:         process.env.CORS_ORIGIN || "http://localhost:3000",
+  corsOrigins:        parseOrigins(process.env.CORS_ORIGIN),
 };
