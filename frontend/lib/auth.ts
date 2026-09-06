@@ -23,7 +23,20 @@ export const saveUser = (user: AuthUser): void => {
 
 export const getToken = (): string | null => {
   if (typeof window === "undefined") return null;
-  return getSessionToken() || null;
+
+  // Descope's module-level SDK is a placeholder built with persistTokens:false
+  // until <AuthProvider> mounts and replaces it, and the placeholder has no
+  // getSessionToken method at all. Reading the token during that window throws
+  // "getSessionToken is not a function", which unhandled will blank the page.
+  //
+  // Callers already cope with a missing token — the request simply goes out
+  // unauthenticated and comes back 401 — so a failed read degrades to a
+  // retryable error instead of a crash.
+  try {
+    return getSessionToken() || null;
+  } catch {
+    return null;
+  }
 };
 
 export const getUser = (): AuthUser | null => {
