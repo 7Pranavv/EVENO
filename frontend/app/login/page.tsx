@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useDescope } from "@descope/nextjs-sdk/client";
 import { useRouter } from "next/navigation";
+import { descopeError } from "@/lib/auth";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -19,9 +20,18 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await sdk.oauth.start(provider, `${window.location.origin}/auth/callback`);
+      const resp = await sdk.oauth.start(provider, `${window.location.origin}/auth/callback`);
+      // oauth.start only *returns* the provider URL — nothing happens until we
+      // navigate to it. Awaiting it and stopping there left these buttons
+      // looking broken: a spinner, then nothing.
+      if (resp.ok && resp.data?.url) {
+        window.location.href = resp.data.url;
+        return;
+      }
+      setError(descopeError(resp, "Authentication failed. Please try again."));
+      setLoading(false);
     } catch (err) {
-      setError("Authentication failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Authentication failed. Please try again.");
       setLoading(false);
     }
   };
@@ -34,10 +44,10 @@ export default function LoginPage() {
       if (resp.ok) {
         router.push("/select-role");
       } else {
-        setError("Invalid email or password.");
+        setError(descopeError(resp, "Invalid email or password."));
       }
     } catch (err) {
-      setError("Login failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Login failed. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -55,10 +65,10 @@ export default function LoginPage() {
       if (resp.ok) {
         setNotice(`If an account exists for ${email}, a reset link is on its way.`);
       } else {
-        setError("Could not send a reset link. Check the email address.");
+        setError(descopeError(resp, "Could not send a reset link. Check the email address."));
       }
     } catch (err) {
-      setError("Could not send a reset link. Please try again.");
+      setError(err instanceof Error ? err.message : "Could not send a reset link. Please try again.");
     }
   };
 

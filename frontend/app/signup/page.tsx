@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useDescope } from "@descope/nextjs-sdk/client";
 import { useRouter } from "next/navigation";
-import { saveUser, Role } from "@/lib/auth";
+import { saveUser, descopeError, Role } from "@/lib/auth";
 import { api } from "@/lib/api";
 
 const HOME_FOR: Record<string, string> = {
@@ -36,13 +36,12 @@ export default function SignupPage() {
       );
       if (resp.ok && resp.data?.url) {
         window.location.href = resp.data.url;
-      } else {
-        setError("Authentication failed. Please try again.");
-        setLoading(false);
+        return;
       }
+      setError(descopeError(resp, "Authentication failed. Please try again."));
+      setLoading(false);
     } catch (err) {
-      console.error("OAuth error:", err);
-      setError("Authentication failed. Please try again.");
+      setError(err instanceof Error ? err.message : "Authentication failed. Please try again.");
       setLoading(false);
     }
   };
@@ -53,7 +52,7 @@ export default function SignupPage() {
     try {
       const resp = await sdk.password.signUp(email, password, { name });
       if (!resp.ok) {
-        setError("Signup failed. Please try again.");
+        setError(descopeError(resp, "Signup failed. Please try again."));
         setLoading(false);
         return;
       }

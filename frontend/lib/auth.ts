@@ -49,6 +49,18 @@ export const getUser = (): AuthUser | null => {
   }
 };
 
+// Descope returns { ok, error: { errorCode, errorDescription, errorMessage } }
+// rather than throwing. Replacing that with a generic "try again" hides the
+// only thing that explains the failure — an unapproved domain, a disabled
+// password flow, a password that misses the project's policy all look
+// identical to the user otherwise.
+export const descopeError = (resp: unknown, fallback: string): string => {
+  const error = (resp as { error?: { errorDescription?: string; errorMessage?: string; errorCode?: string } })?.error;
+  if (!error) return fallback;
+  const detail = error.errorMessage || error.errorDescription;
+  return detail ? (error.errorCode ? `${detail} (${error.errorCode})` : detail) : fallback;
+};
+
 export const logout = (): void => {
   localStorage.removeItem(USER_KEY);
   // Clear the legacy token copy left behind by older versions of this app.
